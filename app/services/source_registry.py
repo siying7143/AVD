@@ -1,0 +1,91 @@
+AU_SIGNAL_SOURCES = {
+    # ACSC RSS
+    "acsc_advisories_rss": {
+        "url": "https://www.cyber.gov.au/rss/advisories",
+        "source_type": "rss",
+        "source_name": "ACSC",
+        "default_score": 1.0,
+        "default_label": "ACSC advisory",
+        "priority": 300,
+        "enabled": True,
+    },
+    "acsc_alerts_rss": {
+        "url": "https://www.cyber.gov.au/rss/alerts",
+        "source_type": "rss",
+        "source_name": "ACSC",
+        "default_score": 2.0,
+        "default_label": "ACSC alert",
+        "priority": 310,
+        "enabled": True,
+    },
+    "acsc_publications_rss": {
+        "url": "https://www.cyber.gov.au/rss/news",
+        "source_type": "rss",
+        "source_name": "ACSC",
+        "default_score": 0.5,
+        "default_label": "ACSC publication",
+        "priority": 100,
+        "enabled": True,
+    },
+    "acsc_threats_rss": {
+        "url": "https://www.cyber.gov.au/rss/threats",
+        "source_type": "rss",
+        "source_name": "ACSC",
+        "default_score": 1.0,
+        "default_label": "ACSC threat notice",
+        "priority": 295,
+        "enabled": True,
+    },
+
+    # ACSC historical Alerts & Advisories current + archive
+    "acsc_alerts_advisories_historical": {
+        "start_urls": [
+            "https://www.cyber.gov.au/about-us/view-all-content/alerts-and-advisories",
+            "https://www.cyber.gov.au/about-us/view-all-content/alerts-and-advisories/archive",
+        ],
+        "source_type": "cyber_advisory_listing",
+        "source_name": "ACSC",
+        "default_score": 2.0,
+        "default_label": "ACSC historical advisory or alert",
+        "priority": 200,
+        "enabled": True,
+    },
+
+    #  ASD PDF fallback
+    "asd_cyber_threat_report_2022_2023": {
+        "url": "https://www.cyber.gov.au/sites/default/files/2023-11/asd-cyber-threat-report-2023.pdf",
+        "source_type": "pdf",
+        "source_name": "ASD/ACSC",
+        "default_score": 1.0,
+        "default_label": "ASD Cyber Threat Report 2022-2023",
+        "priority": 100,
+        "enabled": True,
+    },
+    "asd_cyber_threat_report_2023_2024": {
+        "url": "https://www.cyber.gov.au/sites/default/files/2024-11/asd-cyber-threat-report-2024.pdf",
+        "source_type": "pdf",
+        "source_name": "ASD/ACSC",
+        "default_score": 1.0,
+        "default_label": "ASD Cyber Threat Report 2023-2024",
+        "priority": 100,
+        "enabled": True,
+    },
+    "asd_cyber_threat_report_2024_2025": {
+        "url": "https://www.cyber.gov.au/sites/default/files/2025-10/Annual%20Cyber%20Threat%20Report%202024-25.pdf",
+        "source_type": "pdf",
+        "source_name": "ASD/ACSC",
+        "default_score": 1.0,
+        "default_label": "ASD Cyber Threat Report 2024-2025",
+        "priority": 100,
+        "enabled": True,
+    },
+    "critical_infrastructure_trends_2023_2024": {
+        "url": "https://www.cyber.gov.au/sites/default/files/2024-11/2023-24-cyber-threat-trends-for-critical-infrastructure.pdf",
+        "source_type": "pdf",
+        "source_name": "ASD/ACSC",
+        "default_score": 1.0,
+        "default_label": "Cyber Threat Trends for Critical Infrastructure 2023-2024",
+        "priority": 110,
+        "enabled": True,
+    },
+}

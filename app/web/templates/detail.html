@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}{{ item.cve_id }} · AVD Detail{% endblock %}
+{% block content %}
+<section class="detail-hero detail-hero-v2">
+  <div class="detail-copy">
+    <a class="text-link" href="/vulnerabilities">← Back to vulnerabilities</a>
+    <div class="detail-title-row">
+      <h1>{{ item.cve_id }}</h1>
+      <span class="pill priority-{{ item.priority_level or 'unknown' }}">{{ item.priority_level or 'unscored' }}</span>
+      {% if item.is_au_related %}<span class="pill au">AU related</span>{% endif %}
+      {% if item.kev_status %}<span class="pill kev">CISA KEV</span>{% endif %}
+    </div>
+    <h2 class="detail-subtitle">{{ item.title }}</h2>
+    <p>{{ item.description }}</p>
+  </div>
+
+  <aside class="risk-panel risk-panel-v2">
+    <span>AVD final score</span>
+    <strong>{{ item.final_score_display }}</strong>
+    <div class="score-bar large"><span style="width: {{ item.score_pct }}%"></span></div>
+    <small>NVD base {{ item.base_score_display }} · {{ item.severity or 'unknown' }}</small>
+  </aside>
+</section>
+
+<section class="detail-layout-v2">
+  <div class="detail-primary">
+    <article class="detail-card score-method-card">
+      <div class="card-heading-row">
+        <div>
+          <div class="eyebrow">Scoring explanation</div>
+          <h2>Why this score?</h2>
+        </div>
+        <span class="formula-pill">{{ item.score_formula }}</span>
+      </div>
+
+      <div class="score-breakdown-grid">
+        <div class="breakdown-item">
+          <span>0.8 × NVD base</span>
+          <strong>{{ item.base_component_display }}</strong>
+          <small>Baseline technical severity from NVD CVSS.</small>
+        </div>
+        <div class="breakdown-item">
+          <span>Exploitation signal</span>
+          <strong>+{{ item.exploit_score_display }}</strong>
+          <small>{% if item.kev_status %}CISA KEV match. {% endif %}{% if item.epss_score %}EPSS {{ item.epss_score }}{% else %}No EPSS / KEV boost recorded.{% endif %}</small>
+        </div>
+        <div class="breakdown-item">
+          <span>AU signal</span>
+          <strong>+{{ item.au_score_display }}</strong>
+          <small>{% if item.is_au_related %}Matched {{ item.au_signal_label or item.au_signal_source or 'AU source' }}.{% else %}No AU-specific source match recorded.{% endif %}</small>
+        </div>
+        <div class="breakdown-item">
+          <span>Final priority</span>
+          <strong>{{ item.priority_level or '—' }}</strong>
+          <small>Critical ≥ 9.0 · High ≥ 7.0 · Medium ≥ 4.0 · Low &lt; 4.0</small>
+        </div>
+      </div>
+    </article>
+
+    <article class="detail-card wide-text-card">
+      <div class="card-heading-row">
+        <div>
+          <div class="eyebrow">Description</div>
+          <h2>Vulnerability summary</h2>
+        </div>
+      </div>
+      <p>{{ item.description }}</p>
+    </article>
+
+    <article class="detail-card">
+      <div class="card-heading-row">
+        <div>
+          <div class="eyebrow">Signals</div>
+          <h2>Evidence signals</h2>
+        </div>
+      </div>
+      <div class="signal-grid">
+        <div class="signal-box">
+          <span>Exploitation risk</span>
+          <strong>{{ item.exploit_score_display }}</strong>
+          <p>{{ item.exploitation_risk_source or 'No exploitation source recorded' }}</p>
+          <dl>
+            <dt>KEV</dt><dd>{{ 'Yes' if item.kev_status else 'No' }}</dd>
+            <dt>EPSS score</dt><dd>{{ item.epss_score or '—' }}</dd>
+            <dt>EPSS percentile</dt><dd>{{ item.epss_percentile or '—' }}</dd>
+          </dl>
+        </div>
+        <div class="signal-box">
+          <span>Australian relevance</span>
+          <strong>{{ item.au_score_display }}</strong>
+          <p>{{ item.au_signal_label or item.au_signal_source or 'No AU signal recorded' }}</p>
+          <dl>
+            <dt>AU source</dt><dd>{{ item.au_signal_source or '—' }}</dd>
+            <dt>AU label</dt><dd>{{ item.au_signal_label or '—' }}</dd>
+          </dl>
+        </div>
+      </div>
+    </article>
+
+    <article class="detail-card wide">
+      <div class="card-heading-row">
+        <div>
+          <div class="eyebrow">Affected ecosystem</div>
+          <h2>Vendors, products and CWE</h2>
+        </div>
+      </div>
+      <div class="tag-group">
+        <h3>Vendors</h3>
+        {% for vendor in item.vendors_list %}<span>{{ vendor }}</span>{% else %}<em>None recorded</em>{% endfor %}
+      </div>
+      <div class="tag-group">
+        <h3>Products</h3>
+        {% for product in item.products_list %}<span>{{ product }}</span>{% else %}<em>None recorded</em>{% endfor %}
+      </div>
+      <div class="tag-group">
+        <h3>CWE</h3>
+        {% for cwe in item.cwe_list %}<span>{{ cwe }}</span>{% else %}<em>None recorded</em>{% endfor %}
+      </div>
+    </article>
+  </div>
+
+  <aside class="detail-sidebar">
+    <article class="detail-card compact-card external-card">
+      <h2>External references</h2>
+      <div class="external-links">
+        {% for link in item.external_links %}
+          <a href="{{ link.url }}" target="_blank" rel="noreferrer">
+            <span>{{ link.kind }}</span>
+            <strong>{{ link.label }}</strong>
+            <small>{{ link.url | host_label }}</small>
+          </a>
+        {% else %}
+          <p class="muted">No external links recorded.</p>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="detail-card compact-card">
+      <h2>Timeline</h2>
+      <dl class="timeline-list">
+        <dt>NVD published</dt><dd>{{ item.nvd_published_date or '—' }}</dd>
+        <dt>NVD modified</dt><dd>{{ item.last_modified_date or '—' }}</dd>
+        <dt>AVD assessed</dt><dd>{{ item.assessed_at or '—' }}</dd>
+        <dt>AVD published</dt><dd>{{ item.published_at or '—' }}</dd>
+        <dt>Last AVD update</dt><dd>{{ item.entry_updated_at or '—' }}</dd>
+      </dl>
+    </article>
+
+    <article class="detail-card compact-card">
+      <h2>Severity snapshot</h2>
+      <dl class="timeline-list">
+        <dt>NVD severity</dt><dd>{{ item.severity or '—' }}</dd>
+        <dt>NVD base score</dt><dd>{{ item.base_score_display }}</dd>
+        <dt>AVD final score</dt><dd>{{ item.final_score_display }}</dd>
+        <dt>AVD priority</dt><dd>{{ item.priority_level or '—' }}</dd>
+      </dl>
+    </article>
+  </aside>
+</section>
+{% endblock %}

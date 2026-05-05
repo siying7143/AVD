@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}AVD Portal · Overview{% endblock %}
+{% block content %}
+<section class="hero hero-v4">
+  <div class="hero-copy hero-main-card">
+    <div class="eyebrow">Australian vulnerability intelligence</div>
+    <h1>Published vulnerability records, prioritised for Australian risk.</h1>
+    <p>
+      Explore AVD records enriched with NVD severity, exploitation evidence, EPSS probability,
+      CISA KEV status, and ACSC / ASD context.
+    </p>
+
+    <form class="hero-search" method="get" action="/vulnerabilities">
+      <input type="search" name="q" placeholder="Search CVE, vendor, product, CWE or description" />
+      <button class="btn primary" type="submit">Search database</button>
+    </form>
+
+    <div class="hero-actions">
+      <a class="btn ghost" href="/vulnerabilities?priority=critical&sort=score_desc">Critical vulnerabilities</a>
+      <a class="btn ghost" href="/vulnerabilities?au_related=yes&sort=score_desc">Australian signals</a>
+      <a class="btn ghost" href="/vulnerabilities?period=30d&sort=published_desc">Published in 30 days</a>
+    </div>
+  </div>
+
+  <aside class="hero-visual-panel">
+    <div class="visual-card-header">
+      <span class="pulse-dot"></span>
+      <div>
+        <strong>Signal overview</strong>
+        <small>Live view of published AVD intelligence</small>
+      </div>
+    </div>
+
+    <div class="signal-orb" aria-hidden="true">
+      <span class="orb-ring ring-one"></span>
+      <span class="orb-ring ring-two"></span>
+      <span class="orb-ring ring-three"></span>
+      <span class="orb-node node-nvd">NVD</span>
+      <span class="orb-node node-kev">KEV</span>
+      <span class="orb-node node-au">AU</span>
+      <span class="orb-node node-epss">EPSS</span>
+      <span class="orb-center"><strong>AVD</strong><small>Published records</small></span>
+    </div>
+
+    <div class="signal-bars">
+      <div class="signal-row">
+        <span>Published coverage</span>
+        <strong>{{ stats.total_published|int }}</strong>
+        <i style="width: 92%"></i>
+      </div>
+      <div class="signal-row">
+        <span>Exploitation evidence</span>
+        <strong>{{ stats.kev_count|int }} KEV</strong>
+        <i style="width: 58%"></i>
+      </div>
+      <div class="signal-row">
+        <span>Australian relevance</span>
+        <strong>{{ stats.au_related|int }}</strong>
+        <i style="width: 42%"></i>
+      </div>
+    </div>
+  </aside>
+</section>
+
+<section class="stats-grid stats-grid-v2">
+  <article class="stat-card">
+    <span>Total published</span>
+    <strong>{{ stats.total_published|int }}</strong>
+    <small>Published AVD entries</small>
+  </article>
+  <article class="stat-card">
+    <span>AU-related</span>
+    <strong>{{ stats.au_related|int }}</strong>
+    <small>ACSC / ASD signal detected</small>
+  </article>
+  <article class="stat-card critical">
+    <span>Critical</span>
+    <strong>{{ stats.critical_count|int }}</strong>
+    <small>AVD final score ≥ 9.0</small>
+  </article>
+  <article class="stat-card high">
+    <span>High</span>
+    <strong>{{ stats.high_count|int }}</strong>
+    <small>AVD final score 7.0–8.9</small>
+  </article>
+</section>
+
+<section class="feature-grid">
+  <article class="feature-card">
+    <span class="feature-icon">01</span>
+    <h3>NVD baseline</h3>
+    <p>Uses CVE description, vendor, product, CWE, CVSS base score and NVD publication timeline.</p>
+  </article>
+  <article class="feature-card">
+    <span class="feature-icon">02</span>
+    <h3>Exploitation evidence</h3>
+    <p>Highlights CISA KEV and EPSS evidence so actively exploited issues rise above baseline severity.</p>
+  </article>
+  <article class="feature-card">
+    <span class="feature-icon">03</span>
+    <h3>Australian signal</h3>
+    <p>Flags CVEs found in ACSC advisories, ACSC alerts, ASD reports and other Australian-focused sources.</p>
+  </article>
+  <article class="feature-card">
+    <span class="feature-icon">04</span>
+    <h3>Explainable scoring</h3>
+    <p>Each detail page shows the score breakdown and the external evidence links used for triage.</p>
+  </article>
+</section>
+
+<section class="split-section">
+  <div>
+    <div class="section-head compact-head">
+      <div>
+        <div class="eyebrow">Latest published</div>
+        <h2>Recent vulnerability records</h2>
+      </div>
+      <a class="text-link" href="/vulnerabilities">Open all →</a>
+    </div>
+    <div class="cards-list compact">
+      {% for item in preview %}
+        <a class="vuln-card" href="/vulnerabilities/{{ item.cve_id }}">
+          <div class="card-topline">
+            <span class="mono">{{ item.cve_id }}</span>
+            <span class="pill priority-{{ item.priority_level or 'unknown' }}">{{ item.priority_level or 'unscored' }}</span>
+          </div>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.summary }}</p>
+          <div class="card-meta">
+            <span>AVD {{ item.final_score_display }}</span>
+            <span>NVD {{ item.base_score_display }}</span>
+            {% if item.is_au_related %}<span class="au-dot">AU related</span>{% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <aside class="side-panel">
+    <div class="eyebrow">High signal</div>
+    <h2>AU-related priority queue</h2>
+    <div class="mini-list">
+      {% for item in high_signal %}
+        <a href="/vulnerabilities/{{ item.cve_id }}">
+          <span class="mono">{{ item.cve_id }}</span>
+          <strong>{{ item.final_score_display }}</strong>
+          <small>{{ item.priority_level or 'unscored' }}</small>
+        </a>
+      {% else %}
+        <p class="muted">No AU-related high signal records yet.</p>
+      {% endfor %}
+    </div>
+  </aside>
+</section>
+{% endblock %}

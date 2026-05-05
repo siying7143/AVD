@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}AVD Portal{% endblock %}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="site-ambient" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="AVD overview">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 52 52" role="img">
+          <defs>
+            <linearGradient id="avdGradient" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="#f1f6ff" />
+              <stop offset="0.52" stop-color="#9dd8ff" />
+              <stop offset="1" stop-color="#7c3aed" />
+            </linearGradient>
+          </defs>
+          <rect class="mark-shield" x="7" y="7" width="38" height="38" rx="13" />
+          <path class="mark-a" d="M15.5 36 23.3 16h5.4L36.5 36M19.2 29.5h13.6" />
+          <circle class="mark-dot" cx="39" cy="13" r="3.1" />
+        </svg>
+      </span>
+      <span class="brand-copy">
+        <strong>AVD</strong>
+        <small>Australian Vulnerability Database</small>
+      </span>
+    </a>
+    <nav class="nav-tabs" aria-label="Primary navigation">
+      <a class="nav-link" href="/">Overview</a>
+      <a class="nav-link" href="/vulnerabilities">All vulnerabilities</a>
+      <a class="nav-link" href="/api/vulnerabilities" target="_blank" rel="noreferrer">API</a>
+    </nav>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div><strong>AVD</strong><span>Published vulnerability intelligence portal</span></div>
+    <a href="/vulnerabilities">Browse database</a>
+  </footer>
+</body>
+</html>
