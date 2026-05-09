@@ -40,7 +40,6 @@ PRIORITY_ORDER = ["critical", "high", "medium", "low"]
 SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
 
 
-# Decode JSON/list database fields into clean Python lists for templates and APIs.
 def _json_list(value: Any) -> List[str]:
     if value is None:
         return []
@@ -179,7 +178,6 @@ def normalize_row(row: Dict[str, Any]) -> Dict[str, Any]:
     return row
 
 
-# Translate UI/API filter parameters into a SQL WHERE clause and bind values.
 def _where_from_filters(filters: Dict[str, Any]) -> Tuple[str, List[Any]]:
     clauses = ["e.record_status = 'published'"]
     params: List[Any] = []
@@ -283,7 +281,6 @@ class AVDRepository:
         return get_connection()
 
     def get_home_stats(self) -> Dict[str, Any]:
-        # Compute homepage summary counts from published AVD records only.
         sql = f"""
         SELECT
             COUNT(*) AS total_published,
@@ -308,7 +305,6 @@ class AVDRepository:
         return cleaned
 
     def get_facets(self) -> Dict[str, List[str]]:
-        # Load available filter values for dropdowns and checkbox-style facets.
         priority_sql = f"""
         SELECT DISTINCT a.priority_level
         FROM {DB_TABLE_AVD_ENTRIES} e
@@ -335,7 +331,6 @@ class AVDRepository:
         }
 
     def list_vulnerabilities(self, filters: Dict[str, Any], page: int, page_size: int) -> Dict[str, Any]:
-        # Apply filters, sorting, and pagination while returning total counts for navigation.
         where_sql, params = _where_from_filters(filters)
         sort = ALLOWED_SORTS.get(filters.get("sort") or "published_desc", ALLOWED_SORTS["published_desc"])
         page = max(1, int(page or 1))
@@ -397,7 +392,6 @@ class AVDRepository:
         }
 
     def get_vulnerability_detail(self, cve_id: str) -> Optional[Dict[str, Any]]:
-        # Fetch one published CVE with all fields needed by the detail template.
         sql = f"""
         SELECT
             v.cve_id,

@@ -9,13 +9,12 @@ from pathlib import Path
 
 from app.web.repository import AVDRepository
 
-# Base directory for web templates and static assets.
 BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(
     title="AVD Web Portal",
     description="Standalone read-only web UI for published AVD vulnerabilities.",
-    version="1.2.0",
+    version="1.2.1",
 )
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -23,7 +22,28 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 repo = AVDRepository()
 
 
-# Build a normalized filter dictionary used by list and pagination views.
+def optional_score(value: Optional[str]):
+    """Treat empty score inputs from HTML forms as omitted filters.
+
+    FastAPI validates Optional[float] before calling the route, so a browser
+    submitting score_min= would otherwise return a JSON 422 error.
+    """
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        number = float(text)
+    except ValueError:
+        return None
+    if number < 0:
+        return 0.0
+    if number > 10:
+        return 10.0
+    return number
+
+
 def build_filters(
     q: Optional[str],
     cve: Optional[str],
@@ -64,7 +84,6 @@ def build_filters(
     }
 
 
-# Generate a URL while preserving the current non-empty query filters.
 def query_url(path: str, current: dict, **updates) -> str:
     data = dict(current)
     data.update(updates)
@@ -80,7 +99,6 @@ def query_url(path: str, current: dict, **updates) -> str:
 
 
 def fmt_number(value, digits=2):
-    # Keep numeric display consistent across templates while gracefully handling missing values.
     if value in (None, ""):
         return "—"
     try:
@@ -89,8 +107,7 @@ def fmt_number(value, digits=2):
         return str(value)
 
 
-def host_label(url: str):
-    # Display a compact source host name instead of a full URL in link labels.
+def host_label(url: str) -> str:
     if not url:
         return "Source"
     text = url.replace("https://", "").replace("http://", "")
@@ -104,7 +121,6 @@ templates.env.filters["host_label"] = host_label
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    # Load aggregate stats plus two curated record previews for the landing page.
     stats = repo.get_home_stats()
     preview = repo.list_vulnerabilities({"sort": "published_desc"}, page=1, page_size=6)
     high_signal = repo.list_vulnerabilities(
@@ -131,10 +147,10 @@ def vulnerabilities(
     name: Optional[str] = None,
     vendor: Optional[str] = None,
     product: Optional[str] = None,
-    score_min: Optional[float] = Query(None, ge=0, le=10),
-    score_max: Optional[float] = Query(None, ge=0, le=10),
-    base_score_min: Optional[float] = Query(None, ge=0, le=10),
-    base_score_max: Optional[float] = Query(None, ge=0, le=10),
+    score_min: Optional[str] = None,
+    score_max: Optional[str] = None,
+    base_score_min: Optional[str] = None,
+    base_score_max: Optional[str] = None,
     priority: List[str] = Query(default=[]),
     severity: List[str] = Query(default=[]),
     au_related: str = "all",
@@ -146,8 +162,11 @@ def vulnerabilities(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=5, le=100),
 ):
-    # Render the searchable vulnerability list using validated query parameters
-    # from the browser URL.
+    score_min = optional_score(score_min)
+    score_max = optional_score(score_max)
+    base_score_min = optional_score(base_score_min)
+    base_score_max = optional_score(base_score_max)
+
     filters = build_filters(
         q,
         cve,
@@ -188,7 +207,6 @@ def vulnerabilities(
 
 @app.get("/vulnerabilities/{cve_id}", response_class=HTMLResponse)
 def vulnerability_detail(request: Request, cve_id: str):
-    # Return a 404 instead of an empty page when a CVE is not published in AVD.
     item = repo.get_vulnerability_detail(cve_id)
     if not item:
         raise HTTPException(status_code=404, detail="Vulnerability not found")
@@ -205,10 +223,10 @@ def vulnerabilities_api(
     name: Optional[str] = None,
     vendor: Optional[str] = None,
     product: Optional[str] = None,
-    score_min: Optional[float] = Query(None, ge=0, le=10),
-    score_max: Optional[float] = Query(None, ge=0, le=10),
-    base_score_min: Optional[float] = Query(None, ge=0, le=10),
-    base_score_max: Optional[float] = Query(None, ge=0, le=10),
+    score_min: Optional[str] = None,
+    score_max: Optional[str] = None,
+    base_score_min: Optional[str] = None,
+    base_score_max: Optional[str] = None,
     priority: List[str] = Query(default=[]),
     severity: List[str] = Query(default=[]),
     au_related: str = "all",
@@ -220,7 +238,11 @@ def vulnerabilities_api(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=5, le=100),
 ):
-    # Expose the same filtered list data as JSON for lightweight API consumers.
+    score_min = optional_score(score_min)
+    score_max = optional_score(score_max)
+    base_score_min = optional_score(base_score_min)
+    base_score_max = optional_score(base_score_max)
+
     filters = build_filters(
         q,
         cve,

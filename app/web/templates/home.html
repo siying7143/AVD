@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}AVD Portal · Overview{% endblock %}
 {% block content %}
-<section class="hero hero-v4">
-  <div class="hero-copy hero-main-card">
+<section class="hero hero-v7">
+  <div class="hero-copy hero-main-card hero-copy-flat">
     <div class="eyebrow">Australian vulnerability intelligence</div>
     <h1>Published vulnerability records, prioritised for Australian risk.</h1>
     <p>
@@ -22,16 +22,8 @@
     </div>
   </div>
 
-  <aside class="hero-visual-panel">
-    <div class="visual-card-header">
-      <span class="pulse-dot"></span>
-      <div>
-        <strong>Signal overview</strong>
-        <small>Live view of published AVD intelligence</small>
-      </div>
-    </div>
-
-    <div class="signal-orb" aria-hidden="true">
+  <aside class="hero-visual-panel visual-only-panel" aria-label="AVD intelligence signal map">
+    <div class="signal-orb hero-orb-only" aria-hidden="true">
       <span class="orb-ring ring-one"></span>
       <span class="orb-ring ring-two"></span>
       <span class="orb-ring ring-three"></span>
@@ -40,24 +32,6 @@
       <span class="orb-node node-au">AU</span>
       <span class="orb-node node-epss">EPSS</span>
       <span class="orb-center"><strong>AVD</strong><small>Published records</small></span>
-    </div>
-
-    <div class="signal-bars">
-      <div class="signal-row">
-        <span>Published coverage</span>
-        <strong>{{ stats.total_published|int }}</strong>
-        <i style="width: 92%"></i>
-      </div>
-      <div class="signal-row">
-        <span>Exploitation evidence</span>
-        <strong>{{ stats.kev_count|int }} KEV</strong>
-        <i style="width: 58%"></i>
-      </div>
-      <div class="signal-row">
-        <span>Australian relevance</span>
-        <strong>{{ stats.au_related|int }}</strong>
-        <i style="width: 42%"></i>
-      </div>
     </div>
   </aside>
 </section>
