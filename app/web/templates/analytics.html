@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Analytics · AVD{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div class="page-width heading-inner">
+    <div>
+      <div class="eyebrow">2023–2026 dataset</div>
+      <h1>Analytics</h1>
+      <p>Dataset-level views generated from the current AVD database: year coverage, priority mix, severity distribution, top vendors, products and CWE categories.</p>
+    </div>
+    <div class="heading-actions"><a class="btn secondary" href="/vulnerabilities?year=2023&year=2024&year=2025&year=2026">Open database</a></div>
+  </div>
+</section>
+
+<section class="page-width stats-grid gov-stats">
+  <article class="stat-card"><span>Total records</span><strong>{{ data.summary.total_published | fmt_int }}</strong><small>Published entries</small></article>
+  <article class="stat-card critical"><span>Critical</span><strong>{{ data.summary.critical_count | fmt_int }}</strong><small>AVD priority</small></article>
+  <article class="stat-card high"><span>High</span><strong>{{ data.summary.high_count | fmt_int }}</strong><small>AVD priority</small></article>
+  <article class="stat-card au"><span>AU signal</span><strong>{{ data.summary.au_related | fmt_int }}</strong><small>Matched records</small></article>
+  <article class="stat-card kev"><span>KEV</span><strong>{{ data.summary.kev_count | fmt_int }}</strong><small>Known exploited</small></article>
+  <article class="stat-card"><span>Average score</span><strong>{{ data.summary.avg_final_score | fmt_number }}</strong><small>AVD final score</small></article>
+</section>
+
+<section class="page-width analytics-grid">
+  <article class="panel analytics-wide">
+    <div class="section-title-row compact"><div><div class="eyebrow">Coverage</div><h2>Records by year</h2></div></div>
+    <div class="year-list">
+      {% for row in data.by_year %}
+      <div class="year-row">
+        <div class="year-top"><strong>{{ row.year }}</strong><span>{{ row.total | fmt_int }} records</span></div>
+        <div class="year-bar"><i style="width: {{ row.total_pct }}%"></i></div>
+        <div class="year-metrics">
+          <span>Critical {{ row.critical | fmt_int }}</span>
+          <span>High {{ row.high | fmt_int }}</span>
+          <span>AU {{ row.au_related | fmt_int }}</span>
+          <span>KEV {{ row.kev | fmt_int }}</span>
+          <span>Avg {{ row.avg_score | fmt_number }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="panel rank-panel">
+    <div class="section-title-row compact"><div><div class="eyebrow">AVD priority</div><h2>Priority mix</h2></div></div>
+    <div class="rank-list">
+      {% for item in data.priority_distribution %}
+      <div class="rank-row"><span>{{ item.label }}</span><b>{{ item.count | fmt_int }}</b><div class="mini-bar"><i style="width: {{ item.pct }}%"></i></div></div>
+      {% else %}<p class="muted">No priority data.</p>{% endfor %}
+    </div>
+  </article>
+
+  <article class="panel rank-panel">
+    <div class="section-title-row compact"><div><div class="eyebrow">NVD severity</div><h2>Severity mix</h2></div></div>
+    <div class="rank-list">
+      {% for item in data.severity_distribution %}
+      <div class="rank-row"><span>{{ item.label }}</span><b>{{ item.count | fmt_int }}</b><div class="mini-bar"><i style="width: {{ item.pct }}%"></i></div></div>
+      {% else %}<p class="muted">No severity data.</p>{% endfor %}
+    </div>
+  </article>
+
+  <article class="panel rank-panel">
+    <div class="section-title-row compact"><div><div class="eyebrow">Technology</div><h2>Top vendors</h2></div></div>
+    <div class="rank-list">
+      {% for item in data.top_vendors %}
+      <div class="rank-row"><span>{{ item.label }}</span><b>{{ item.count | fmt_int }}</b><div class="mini-bar"><i style="width: {{ item.pct }}%"></i></div></div>
+      {% else %}<p class="muted">No vendor data.</p>{% endfor %}
+    </div>
+  </article>
+
+  <article class="panel rank-panel">
+    <div class="section-title-row compact"><div><div class="eyebrow">Technology</div><h2>Top products</h2></div></div>
+    <div class="rank-list">
+      {% for item in data.top_products %}
+      <div class="rank-row"><span>{{ item.label }}</span><b>{{ item.count | fmt_int }}</b><div class="mini-bar"><i style="width: {{ item.pct }}%"></i></div></div>
+      {% else %}<p class="muted">No product data.</p>{% endfor %}
+    </div>
+  </article>
+
+  <article class="panel rank-panel">
+    <div class="section-title-row compact"><div><div class="eyebrow">Weakness taxonomy</div><h2>Top CWE categories</h2></div></div>
+    <div class="rank-list">
+      {% for item in data.top_cwe %}
+      <div class="rank-row"><span>{{ item.label }}</span><b>{{ item.count | fmt_int }}</b><div class="mini-bar"><i style="width: {{ item.pct }}%"></i></div></div>
+      {% else %}<p class="muted">No CWE data.</p>{% endfor %}
+    </div>
+  </article>
+</section>
+{% endblock %}

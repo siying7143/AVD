@@ -1,160 +1,123 @@
 {% extends "base.html" %}
-{% block title %}{{ item.cve_id }} · AVD Detail{% endblock %}
+{% block title %}{{ item.cve_id }} · AVD Intelligence Report{% endblock %}
 {% block content %}
-<section class="detail-hero detail-hero-v2">
-  <div class="detail-copy">
-    <a class="text-link" href="/vulnerabilities">← Back to vulnerabilities</a>
-    <div class="detail-title-row">
-      <h1>{{ item.cve_id }}</h1>
-      <span class="pill priority-{{ item.priority_level or 'unknown' }}">{{ item.priority_level or 'unscored' }}</span>
-      {% if item.is_au_related %}<span class="pill au">AU related</span>{% endif %}
-      {% if item.kev_status %}<span class="pill kev">CISA KEV</span>{% endif %}
-    </div>
-    <h2 class="detail-subtitle">{{ item.title }}</h2>
-    <p>{{ item.description }}</p>
-  </div>
+<section class="page-width detail-page">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a><span>/</span><a href="/vulnerabilities">Vulnerabilities</a><span>/</span><strong>{{ item.cve_id }}</strong>
+  </nav>
 
-  <aside class="risk-panel risk-panel-v2">
-    <span>AVD final score</span>
-    <strong>{{ item.final_score_display }}</strong>
-    <div class="score-bar large"><span style="width: {{ item.score_pct }}%"></span></div>
-    <small>NVD base {{ item.base_score_display }} · {{ item.severity or 'unknown' }}</small>
-  </aside>
-</section>
-
-<section class="detail-layout-v2">
-  <div class="detail-primary">
-    <article class="detail-card score-method-card">
-      <div class="card-heading-row">
-        <div>
-          <div class="eyebrow">Scoring explanation</div>
-          <h2>Why this score?</h2>
+  <div class="detail-layout">
+    <article class="detail-main">
+      <div class="detail-header panel">
+        <div class="tag-row">
+          <span class="pill muted-pill">{{ item.cve_id }}</span>
+          {% if item.priority_level %}<span class="score-chip priority-{{ item.priority_level }}">AVD {{ item.final_score_display }} · {{ item.priority_level|capitalize }}</span>{% endif %}
+          {% if item.kev_status %}<span class="pill kev">CISA KEV</span>{% endif %}
+          {% if item.is_au_related %}<span class="pill au">AU signal</span>{% endif %}
         </div>
-        <span class="formula-pill">{{ item.score_formula }}</span>
+        <h1>{{ item.title }}</h1>
+        <p class="muted">NVD published: {{ item.nvd_published_date or '—' }} · Last modified: {{ item.last_modified_date or '—' }} · AVD published: {{ item.published_at or '—' }}</p>
       </div>
 
-      <div class="score-breakdown-grid">
-        <div class="breakdown-item">
-          <span>0.8 × NVD base</span>
-          <strong>{{ item.base_component_display }}</strong>
-          <small>Baseline technical severity from NVD CVSS.</small>
+      <section class="panel report-section">
+        <div class="section-title-row compact">
+          <div><div class="eyebrow">Overview</div><h2>Description</h2></div>
         </div>
-        <div class="breakdown-item">
-          <span>Exploitation signal</span>
-          <strong>+{{ item.exploit_score_display }}</strong>
-          <small>{% if item.kev_status %}CISA KEV match. {% endif %}{% if item.epss_score %}EPSS {{ item.epss_score }}{% else %}No EPSS / KEV boost recorded.{% endif %}</small>
-        </div>
-        <div class="breakdown-item">
-          <span>AU signal</span>
-          <strong>+{{ item.au_score_display }}</strong>
-          <small>{% if item.is_au_related %}Matched {{ item.au_signal_label or item.au_signal_source or 'AU source' }}.{% else %}No AU-specific source match recorded.{% endif %}</small>
-        </div>
-        <div class="breakdown-item">
-          <span>Final priority</span>
-          <strong>{{ item.priority_level or '—' }}</strong>
-          <small>Critical ≥ 9.0 · High ≥ 7.0 · Medium ≥ 4.0 · Low &lt; 4.0</small>
-        </div>
-      </div>
-    </article>
+        <p class="description-text">{{ item.description or 'No description is available for this record.' }}</p>
+      </section>
 
-    <article class="detail-card wide-text-card">
-      <div class="card-heading-row">
-        <div>
-          <div class="eyebrow">Description</div>
-          <h2>Vulnerability summary</h2>
+      <section class="panel report-section">
+        <div class="section-title-row compact">
+          <div><div class="eyebrow">Affected technology</div><h2>Vendors, products and weakness categories</h2></div>
         </div>
-      </div>
-      <p>{{ item.description }}</p>
-    </article>
+        <div class="meta-table">
+          <div><span>Vendors</span><strong>{{ item.vendors_list | join(', ') if item.vendors_list else '—' }}</strong></div>
+          <div><span>Products</span><strong>{{ item.products_list | join(', ') if item.products_list else '—' }}</strong></div>
+          <div><span>CWE identifiers</span><strong>{{ item.cwe_list | join(', ') if item.cwe_list else '—' }}</strong></div>
+          <div><span>NVD severity</span><strong>{{ item.severity or '—' }}</strong></div>
+        </div>
+      </section>
 
-    <article class="detail-card">
-      <div class="card-heading-row">
-        <div>
-          <div class="eyebrow">Signals</div>
-          <h2>Evidence signals</h2>
+      <section class="panel report-section">
+        <div class="section-title-row compact">
+          <div><div class="eyebrow">Evidence</div><h2>Exploitation and Australian signals</h2></div>
         </div>
-      </div>
-      <div class="signal-grid">
-        <div class="signal-box">
-          <span>Exploitation risk</span>
-          <strong>{{ item.exploit_score_display }}</strong>
-          <p>{{ item.exploitation_risk_source or 'No exploitation source recorded' }}</p>
-          <dl>
-            <dt>KEV</dt><dd>{{ 'Yes' if item.kev_status else 'No' }}</dd>
-            <dt>EPSS score</dt><dd>{{ item.epss_score or '—' }}</dd>
-            <dt>EPSS percentile</dt><dd>{{ item.epss_percentile or '—' }}</dd>
-          </dl>
+        <div class="evidence-grid">
+          <div class="evidence-card">
+            <span>CISA KEV</span>
+            <strong>{% if item.kev_status %}Matched{% else %}Not matched{% endif %}</strong>
+            <p>Known exploited status is used as high-confidence exploitation evidence.</p>
+          </div>
+          <div class="evidence-card">
+            <span>EPSS</span>
+            <strong>{{ item.epss_score | fmt_number if item.epss_score not in [None, ''] else '—' }}</strong>
+            <p>Percentile: {{ item.epss_percentile | fmt_number if item.epss_percentile not in [None, ''] else '—' }}</p>
+          </div>
+          <div class="evidence-card">
+            <span>AU source signal</span>
+            <strong>{% if item.is_au_related %}Matched{% else %}No match{% endif %}</strong>
+            <p>{{ item.au_signal_label or item.au_signal_source or 'No Australian source label is attached to this record.' }}</p>
+          </div>
         </div>
-        <div class="signal-box">
-          <span>Australian relevance</span>
-          <strong>{{ item.au_score_display }}</strong>
-          <p>{{ item.au_signal_label or item.au_signal_source or 'No AU signal recorded' }}</p>
-          <dl>
-            <dt>AU source</dt><dd>{{ item.au_signal_source or '—' }}</dd>
-            <dt>AU label</dt><dd>{{ item.au_signal_label or '—' }}</dd>
-          </dl>
-        </div>
-      </div>
-    </article>
+      </section>
 
-    <article class="detail-card wide">
-      <div class="card-heading-row">
-        <div>
-          <div class="eyebrow">Affected ecosystem</div>
-          <h2>Vendors, products and CWE</h2>
+      <section class="panel report-section">
+        <div class="section-title-row compact">
+          <div><div class="eyebrow">Scoring</div><h2>AVD score breakdown</h2></div>
         </div>
-      </div>
-      <div class="tag-group">
-        <h3>Vendors</h3>
-        {% for vendor in item.vendors_list %}<span>{{ vendor }}</span>{% else %}<em>None recorded</em>{% endfor %}
-      </div>
-      <div class="tag-group">
-        <h3>Products</h3>
-        {% for product in item.products_list %}<span>{{ product }}</span>{% else %}<em>None recorded</em>{% endfor %}
-      </div>
-      <div class="tag-group">
-        <h3>CWE</h3>
-        {% for cwe in item.cwe_list %}<span>{{ cwe }}</span>{% else %}<em>None recorded</em>{% endfor %}
-      </div>
-    </article>
-  </div>
+        <div class="formula-box">{{ item.score_formula }}</div>
+        <div class="score-breakdown">
+          <div><span>0.8 × NVD base</span><strong>{{ item.base_component_display }}</strong></div>
+          <div><span>Exploitation risk</span><strong>{{ item.exploit_score_display }}</strong></div>
+          <div><span>Australian signal</span><strong>{{ item.au_score_display }}</strong></div>
+          <div><span>Final AVD score</span><strong>{{ item.final_score_display }}</strong></div>
+        </div>
+      </section>
 
-  <aside class="detail-sidebar">
-    <article class="detail-card compact-card external-card">
-      <h2>External references</h2>
-      <div class="external-links">
-        {% for link in item.external_links %}
+      <section class="panel report-section">
+        <div class="section-title-row compact">
+          <div><div class="eyebrow">References</div><h2>External records and evidence sources</h2></div>
+        </div>
+        <div class="reference-list">
+          {% for link in item.external_links %}
           <a href="{{ link.url }}" target="_blank" rel="noreferrer">
             <span>{{ link.kind }}</span>
             <strong>{{ link.label }}</strong>
             <small>{{ link.url | host_label }}</small>
           </a>
-        {% else %}
-          <p class="muted">No external links recorded.</p>
-        {% endfor %}
+          {% else %}
+          <p class="muted">No external references were generated for this record.</p>
+          {% endfor %}
+        </div>
+      </section>
+    </article>
+
+    <aside class="detail-sidebar">
+      <div class="score-panel panel">
+        <div class="score-title">AVD priority score</div>
+        <div class="score-number priority-text-{{ item.priority_level or 'unknown' }}">{{ item.final_score_display }}</div>
+        <div class="score-bar"><i style="width: {{ item.score_pct }}%"></i></div>
+        <div class="score-scale"><span>0</span><span>5</span><span>10</span></div>
+        <p>{{ item.priority_level|capitalize if item.priority_level else 'Unscored' }} priority based on the current AVD assessment.</p>
       </div>
-    </article>
 
-    <article class="detail-card compact-card">
-      <h2>Timeline</h2>
-      <dl class="timeline-list">
-        <dt>NVD published</dt><dd>{{ item.nvd_published_date or '—' }}</dd>
-        <dt>NVD modified</dt><dd>{{ item.last_modified_date or '—' }}</dd>
-        <dt>AVD assessed</dt><dd>{{ item.assessed_at or '—' }}</dd>
-        <dt>AVD published</dt><dd>{{ item.published_at or '—' }}</dd>
-        <dt>Last AVD update</dt><dd>{{ item.entry_updated_at or '—' }}</dd>
-      </dl>
-    </article>
+      <div class="panel identifier-panel">
+        <h2>Identifiers</h2>
+        <dl>
+          <div><dt>CVE</dt><dd>{{ item.cve_id }}</dd></div>
+          <div><dt>NVD base</dt><dd>{{ item.base_score_display }}</dd></div>
+          <div><dt>NVD severity</dt><dd>{{ item.severity or '—' }}</dd></div>
+          <div><dt>Assessed</dt><dd>{{ item.assessed_at or '—' }}</dd></div>
+          <div><dt>Published</dt><dd>{{ item.published_at or '—' }}</dd></div>
+        </dl>
+      </div>
 
-    <article class="detail-card compact-card">
-      <h2>Severity snapshot</h2>
-      <dl class="timeline-list">
-        <dt>NVD severity</dt><dd>{{ item.severity or '—' }}</dd>
-        <dt>NVD base score</dt><dd>{{ item.base_score_display }}</dd>
-        <dt>AVD final score</dt><dd>{{ item.final_score_display }}</dd>
-        <dt>AVD priority</dt><dd>{{ item.priority_level or '—' }}</dd>
-      </dl>
-    </article>
-  </aside>
+      <div class="panel identifier-panel">
+        <h2>API access</h2>
+        <p class="muted">Retrieve this record as JSON from the implemented read-only API endpoint.</p>
+        <a class="btn secondary full" href="/api/vulnerabilities/{{ item.cve_id }}" target="_blank" rel="noreferrer">Open JSON</a>
+      </div>
+    </aside>
+  </div>
 </section>
 {% endblock %}

@@ -1,239 +1,204 @@
 {% extends "base.html" %}
-{% block title %}AVD Portal · Vulnerabilities{% endblock %}
+{% block title %}Vulnerability Search · AVD{% endblock %}
 {% block content %}
-<section class="page-title database-title">
-  <div>
-    <div class="eyebrow">Database</div>
-    <h1>All published vulnerabilities</h1>
-    <p>{{ total }} published records matched your filters.</p>
-  </div>
-  <div class="score-legend-card">
-    <strong>Score guide</strong>
-    <span>Critical ≥ 9.0</span>
-    <span>High ≥ 7.0</span>
-    <span>Medium ≥ 4.0</span>
+<section class="page-heading">
+  <div class="page-width heading-inner">
+    <div>
+      <div class="eyebrow">Database search</div>
+      <h1>Vulnerability Search</h1>
+      <p>Search published 2023–2026 CVE records. Filters are backed by your current AVD database fields: CVE, description, vendor, product, score, severity, KEV and Australian signal status.</p>
+    </div>
+    <div class="heading-actions">
+      <a class="btn primary" href="/api">API Docs</a>
+    </div>
   </div>
 </section>
 
-<form class="layout" method="get" action="/vulnerabilities">
-  <aside class="filters-panel">
-    <div class="filter-head">
+<form class="page-width search-layout" method="get" action="/vulnerabilities">
+  <aside class="filter-panel panel">
+    <div class="filter-header">
+      <strong>Search filters</strong>
+      <a href="/vulnerabilities">Reset</a>
+    </div>
+
+    <label class="field-label" for="q">Keyword / CVE / vendor</label>
+    <input id="q" name="q" value="{{ filters.q or '' }}" placeholder="remote code execution, Apache, CVE-2026…" />
+
+    <div class="filter-subtitle">Identity</div>
+    <label class="field-label" for="cve">CVE ID</label>
+    <input id="cve" name="cve" value="{{ filters.cve or '' }}" placeholder="CVE-2025" />
+    <label class="field-label" for="name">Description contains</label>
+    <input id="name" name="name" value="{{ filters.name or '' }}" placeholder="SQL injection" />
+    <div class="two-cols">
       <div>
-        <strong>Filters</strong>
-        <small>Refine published AVD records</small>
+        <label class="field-label" for="vendor">Vendor</label>
+        <input id="vendor" name="vendor" value="{{ filters.vendor or '' }}" placeholder="Microsoft" />
       </div>
-      <a href="/vulnerabilities">Clear</a>
-    </div>
-
-    <div class="filter-scroll">
-      <div class="filter-section">
-        <label>Global search</label>
-        <input type="search" name="q" value="{{ filters.q or '' }}" placeholder="CVE, vendor, product, CWE..." />
-      </div>
-
-      <div class="filter-grid-2">
-        <div class="filter-section">
-          <label>CVE</label>
-          <input name="cve" value="{{ filters.cve or '' }}" placeholder="CVE-2025" />
-        </div>
-        <div class="filter-section">
-          <label>Name / description</label>
-          <input name="name" value="{{ filters.name or '' }}" placeholder="OpenSSL, RCE..." />
-        </div>
-      </div>
-
-      <div class="filter-grid-2">
-        <div class="filter-section">
-          <label>Vendor</label>
-          <input name="vendor" value="{{ filters.vendor or '' }}" placeholder="microsoft" />
-        </div>
-        <div class="filter-section">
-          <label>Product</label>
-          <input name="product" value="{{ filters.product or '' }}" placeholder="windows" />
-        </div>
-      </div>
-
-      <div class="filter-subtitle">AVD score</div>
-      <div class="filter-help">Combines NVD base severity with exploitation evidence and Australian relevance signals.</div>
-      <div class="filter-grid-2">
-        <div class="filter-section">
-          <label>Final score min</label>
-          <input type="number" min="0" max="10" step="0.1" name="score_min" value="{{ filters.score_min if filters.score_min is not none else '' }}" />
-        </div>
-        <div class="filter-section">
-          <label>Final score max</label>
-          <input type="number" min="0" max="10" step="0.1" name="score_max" value="{{ filters.score_max if filters.score_max is not none else '' }}" />
-        </div>
-      </div>
-
-      <div class="filter-subtitle">NVD baseline</div>
-      <div class="filter-grid-2">
-        <div class="filter-section">
-          <label>Base score min</label>
-          <input type="number" min="0" max="10" step="0.1" name="base_score_min" value="{{ filters.base_score_min if filters.base_score_min is not none else '' }}" />
-        </div>
-        <div class="filter-section">
-          <label>Base score max</label>
-          <input type="number" min="0" max="10" step="0.1" name="base_score_max" value="{{ filters.base_score_max if filters.base_score_max is not none else '' }}" />
-        </div>
-      </div>
-
-      <div class="filter-section">
-        <label>AU relevance</label>
-        <select name="au_related">
-          <option value="all" {% if filters.au_related == 'all' %}selected{% endif %}>All records</option>
-          <option value="yes" {% if filters.au_related == 'yes' %}selected{% endif %}>AU related only</option>
-          <option value="no" {% if filters.au_related == 'no' %}selected{% endif %}>Non-AU only</option>
-        </select>
-      </div>
-
-      <div class="filter-section">
-        <label>AVD priority</label>
-        <div class="check-row">
-          {% for p in facets.priorities %}
-            <label><input type="checkbox" name="priority" value="{{ p }}" {% if p in filters.priority %}checked{% endif %}/> {{ p }}</label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="filter-section">
-        <label>NVD severity</label>
-        <div class="check-row">
-          {% for s in facets.severities %}
-            <label><input type="checkbox" name="severity" value="{{ s }}" {% if s in filters.severity %}checked{% endif %}/> {{ s }}</label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="filter-subtitle">Time range</div>
-      <div class="filter-grid-2">
-        <div class="filter-section">
-          <label>Date field</label>
-          <select name="date_field">
-            <option value="published_at" {% if filters.date_field == 'published_at' %}selected{% endif %}>AVD published</option>
-            <option value="assessed_at" {% if filters.date_field == 'assessed_at' %}selected{% endif %}>Assessed</option>
-            <option value="nvd_published_date" {% if filters.date_field == 'nvd_published_date' %}selected{% endif %}>NVD published</option>
-            <option value="last_modified_date" {% if filters.date_field == 'last_modified_date' %}selected{% endif %}>NVD modified</option>
-          </select>
-        </div>
-        <div class="filter-section">
-          <label>Quick period</label>
-          <select name="period">
-            <option value="all" {% if filters.period == 'all' %}selected{% endif %}>All time</option>
-            <option value="7d" {% if filters.period == '7d' %}selected{% endif %}>Last 7 days</option>
-            <option value="30d" {% if filters.period == '30d' %}selected{% endif %}>Last 30 days</option>
-            <option value="90d" {% if filters.period == '90d' %}selected{% endif %}>Last 90 days</option>
-            <option value="1y" {% if filters.period == '1y' %}selected{% endif %}>Last year</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="filter-grid-2">
-        <div class="filter-section">
-          <label>From</label>
-          <input type="date" name="date_from" value="{{ filters.date_from or '' }}" />
-        </div>
-        <div class="filter-section">
-          <label>To</label>
-          <input type="date" name="date_to" value="{{ filters.date_to or '' }}" />
-        </div>
-      </div>
-
-      <div class="filter-subtitle">Display</div>
-      <div class="filter-grid-2">
-        <div class="filter-section">
-          <label>Sort</label>
-          <select name="sort">
-            {% set sorts = {
-              'published_desc': 'AVD published newest',
-              'published_asc': 'AVD published oldest',
-              'score_desc': 'Final score high to low',
-              'score_asc': 'Final score low to high',
-              'base_score_desc': 'Base score high to low',
-              'base_score_asc': 'Base score low to high',
-              'modified_desc': 'NVD modified newest',
-              'modified_asc': 'NVD modified oldest',
-              'cve_desc': 'CVE newest',
-              'cve_asc': 'CVE oldest'
-            } %}
-            {% for key, label in sorts.items() %}
-              <option value="{{ key }}" {% if filters.sort == key %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="filter-section">
-          <label>Page size</label>
-          <select name="page_size">
-            {% for size in [10,20,50,100] %}
-              <option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <div class="filter-actions">
-      <button class="btn primary full" type="submit">Apply filters</button>
-      <a class="btn ghost full" href="/vulnerabilities">Reset</a>
-    </div>
-  </aside>
-
-  <section class="results-panel">
-    <div class="toolbar">
       <div>
-        <strong>{{ total }} results</strong>
-        <span>Page {{ page }} of {{ pages }}</span>
+        <label class="field-label" for="product">Product</label>
+        <input id="product" name="product" value="{{ filters.product or '' }}" placeholder="Windows" />
       </div>
-      <button class="btn small ghost" type="submit">Refresh results</button>
     </div>
 
-    <div class="cards-list result-list">
-      {% for item in items %}
-        <a class="vuln-card result-card" href="/vulnerabilities/{{ item.cve_id }}">
-          <div class="card-main-row">
-            <div class="card-main-copy">
-              <div class="card-topline">
-                <span class="mono">{{ item.cve_id }}</span>
-                <span class="pill priority-{{ item.priority_level or 'unknown' }}">{{ item.priority_level or 'unscored' }}</span>
-                {% if item.is_au_related %}<span class="pill au">AU related</span>{% endif %}
-                {% if item.kev_status %}<span class="pill kev">CISA KEV</span>{% endif %}
-              </div>
-              <h3>{{ item.title }}</h3>
-              <p>{{ item.summary }}</p>
-            </div>
-            <div class="card-score-box">
-              <span>AVD score</span>
-              <strong>{{ item.final_score_display }}</strong>
-              <small>NVD {{ item.base_score_display }} {{ item.severity or '' }}</small>
-            </div>
-          </div>
-          <div class="score-bar" title="{{ item.score_formula }}">
-            <span style="width: {{ item.score_pct }}%"></span>
-          </div>
-          <div class="chips">
-            <span>Exploit +{{ item.exploit_score_display }}</span>
-            <span>AU +{{ item.au_score_display }}</span>
-            {% if item.vendors_list %}<span>Vendor: {{ item.vendors_list[:3] | join(', ') }}</span>{% endif %}
-            {% if item.products_list %}<span>Product: {{ item.products_list[:2] | join(', ') }}</span>{% endif %}
-          </div>
-          <div class="muted-line">
-            {% if item.published_at %}AVD published: {{ item.published_at }}{% endif %}
-            {% if item.last_modified_date %} · NVD modified: {{ item.last_modified_date }}{% endif %}
-          </div>
-        </a>
-      {% else %}
-        <div class="empty-state">No records matched these filters.</div>
+    <div class="filter-subtitle">AVD priority</div>
+    <div class="checkbox-grid">
+      {% for p in facets.priorities %}
+      <label><input type="checkbox" name="priority" value="{{ p }}" {% if p in filters.priority %}checked{% endif %}> {{ p|capitalize }}</label>
       {% endfor %}
     </div>
 
+    <div class="filter-subtitle">NVD severity</div>
+    <div class="checkbox-grid">
+      {% for s in facets.severities %}
+      <label><input type="checkbox" name="severity" value="{{ s }}" {% if s in filters.severity %}checked{% endif %}> {{ s }}</label>
+      {% endfor %}
+    </div>
+
+    <div class="filter-subtitle">Scores</div>
+    <div class="two-cols">
+      <div>
+        <label class="field-label" for="score_min">AVD min</label>
+        <input id="score_min" name="score_min" value="{{ filters.score_min if filters.score_min is not none else '' }}" placeholder="0" />
+      </div>
+      <div>
+        <label class="field-label" for="score_max">AVD max</label>
+        <input id="score_max" name="score_max" value="{{ filters.score_max if filters.score_max is not none else '' }}" placeholder="10" />
+      </div>
+      <div>
+        <label class="field-label" for="base_score_min">NVD min</label>
+        <input id="base_score_min" name="base_score_min" value="{{ filters.base_score_min if filters.base_score_min is not none else '' }}" placeholder="0" />
+      </div>
+      <div>
+        <label class="field-label" for="base_score_max">NVD max</label>
+        <input id="base_score_max" name="base_score_max" value="{{ filters.base_score_max if filters.base_score_max is not none else '' }}" placeholder="10" />
+      </div>
+    </div>
+
+    <div class="filter-subtitle">Signals</div>
+    <div class="two-cols">
+      <div>
+        <label class="field-label" for="kev">CISA KEV</label>
+        <select id="kev" name="kev">
+          <option value="all" {% if filters.kev == 'all' %}selected{% endif %}>All</option>
+          <option value="yes" {% if filters.kev == 'yes' %}selected{% endif %}>Matched</option>
+          <option value="no" {% if filters.kev == 'no' %}selected{% endif %}>Not matched</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label" for="au_related">AU signal</label>
+        <select id="au_related" name="au_related">
+          <option value="all" {% if filters.au_related == 'all' %}selected{% endif %}>All</option>
+          <option value="yes" {% if filters.au_related == 'yes' %}selected{% endif %}>Matched</option>
+          <option value="no" {% if filters.au_related == 'no' %}selected{% endif %}>Not matched</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="filter-subtitle">Dates and sorting</div>
+    <label class="field-label" for="date_field">Date field</label>
+    <select id="date_field" name="date_field">
+      <option value="published_at" {% if filters.date_field == 'published_at' %}selected{% endif %}>AVD published</option>
+      <option value="assessed_at" {% if filters.date_field == 'assessed_at' %}selected{% endif %}>AVD assessed</option>
+      <option value="nvd_published_date" {% if filters.date_field == 'nvd_published_date' %}selected{% endif %}>NVD published</option>
+      <option value="last_modified_date" {% if filters.date_field == 'last_modified_date' %}selected{% endif %}>NVD modified</option>
+    </select>
+    <div class="two-cols date-range">
+      <div>
+        <label class="field-label" for="date_from">From</label>
+        <input id="date_from" name="date_from" type="date" value="{{ filters.date_from or '' }}" />
+      </div>
+      <div>
+        <label class="field-label" for="date_to">To</label>
+        <input id="date_to" name="date_to" type="date" value="{{ filters.date_to or '' }}" />
+      </div>
+    </div>
+    <label class="field-label" for="sort">Sort</label>
+    <select id="sort" name="sort">
+      <option value="published_desc" {% if filters.sort == 'published_desc' %}selected{% endif %}>Newest first / CVE desc when tied</option>
+      <option value="published_asc" {% if filters.sort == 'published_asc' %}selected{% endif %}>Oldest first</option>
+      <option value="score_desc" {% if filters.sort == 'score_desc' %}selected{% endif %}>AVD score high → low</option>
+      <option value="score_asc" {% if filters.sort == 'score_asc' %}selected{% endif %}>AVD score low → high</option>
+      <option value="base_score_desc" {% if filters.sort == 'base_score_desc' %}selected{% endif %}>NVD score high → low</option>
+      <option value="modified_desc" {% if filters.sort == 'modified_desc' %}selected{% endif %}>Recently modified</option>
+      <option value="cve_desc" {% if filters.sort == 'cve_desc' %}selected{% endif %}>CVE descending</option>
+      <option value="cve_asc" {% if filters.sort == 'cve_asc' %}selected{% endif %}>CVE ascending</option>
+    </select>
+
+    <button class="btn primary full" type="submit">Apply filters</button>
+  </aside>
+
+  <section class="results-panel panel">
+    <div class="results-header">
+      <div>
+        <h2>Results</h2>
+        <p>Showing {{ items|length }} of {{ total | fmt_int }} matching vulnerabilities</p>
+      </div>
+      <div class="results-tools">
+        <label for="page_size">Rows</label>
+        <select id="page_size" name="page_size" onchange="this.form.submit()">
+          {% for s in [10,25,50,100] %}
+          <option value="{{ s }}" {% if page_size == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrap search-table-wrap">
+      <table class="data-table search-table">
+        <thead>
+          <tr>
+            <th>CVE</th>
+            <th>Description</th>
+            <th>AVD</th>
+            <th>NVD</th>
+            <th>Signals</th>
+            <th>Vendor / Product</th>
+            <th>Published</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td><a class="mono-link" href="/vulnerabilities/{{ item.cve_id }}">{{ item.cve_id }}</a></td>
+            <td class="description-cell">
+              <a class="row-title" href="/vulnerabilities/{{ item.cve_id }}">{{ item.title }}</a>
+              <small>{% if item.cwe_list %}{{ item.cwe_list[:3] | join(', ') }}{% else %}No CWE listed{% endif %}</small>
+            </td>
+            <td><span class="score-chip priority-{{ item.priority_level or 'unknown' }}">{{ item.final_score_display }}</span></td>
+            <td><span class="severity-text severity-{{ item.severity or 'UNKNOWN' }}">{{ item.base_score_display }} {{ item.severity or '' }}</span></td>
+            <td>
+              {% if item.kev_status %}<span class="pill kev">KEV</span>{% endif %}
+              {% if item.epss_score not in [None, '', 0, 0.0] %}<span class="pill epss">EPSS</span>{% endif %}
+              {% if item.is_au_related %}<span class="pill au">AU</span>{% endif %}
+              {% if not item.kev_status and not item.is_au_related and item.epss_score in [None, '', 0, 0.0] %}<span class="muted">—</span>{% endif %}
+            </td>
+            <td class="taxonomy-cell">
+              <strong>{{ item.vendors_list[:2] | join(', ') if item.vendors_list else '—' }}</strong>
+              <small>{{ item.products_list[:2] | join(', ') if item.products_list else '—' }}</small>
+            </td>
+            <td>{{ item.published_at or item.nvd_published_date or '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" class="empty-cell">No vulnerabilities match the current filters.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
     <div class="pagination">
-      {% if page > 1 %}
-        <a class="btn ghost" href="{{ query_url('/vulnerabilities', query_state, page=page-1) }}">← Previous</a>
-      {% endif %}
-      <span>Page {{ page }} / {{ pages }}</span>
-      {% if page < pages %}
-        <a class="btn ghost" href="{{ query_url('/vulnerabilities', query_state, page=page+1) }}">Next →</a>
-      {% endif %}
+      <span>Page {{ page }} of {{ pages }}</span>
+      <div class="pagination-links">
+        {% if page > 1 %}
+          <a href="{{ query_url('/vulnerabilities', query_state, page=page-1) }}">← Previous</a>
+        {% else %}
+          <span class="disabled">← Previous</span>
+        {% endif %}
+        {% if page < pages %}
+          <a href="{{ query_url('/vulnerabilities', query_state, page=page+1) }}">Next →</a>
+        {% else %}
+          <span class="disabled">Next →</span>
+        {% endif %}
+      </div>
     </div>
   </section>
 </form>

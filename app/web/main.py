@@ -13,21 +13,19 @@ BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(
     title="AVD Web Portal",
-    description="Standalone read-only web UI for published AVD vulnerabilities.",
-    version="1.2.1",
+    description="Read-only web UI for 2023-2026 Australian vulnerability intelligence with database search, detail reports and API docs.",
+    version="2.0.0",
 )
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 repo = AVDRepository()
 
+DATASET_YEARS = ["2023", "2024", "2025", "2026"]
+
 
 def optional_score(value: Optional[str]):
-    """Treat empty score inputs from HTML forms as omitted filters.
-
-    FastAPI validates Optional[float] before calling the route, so a browser
-    submitting score_min= would otherwise return a JSON 422 error.
-    """
+    """Treat empty score inputs from HTML forms as omitted filters."""
     if value is None:
         return None
     text = str(value).strip()
@@ -56,7 +54,9 @@ def build_filters(
     base_score_max: Optional[float],
     priority: List[str],
     severity: List[str],
+    year: List[str],
     au_related: str,
+    kev: str,
     period: str,
     date_field: str,
     date_from: Optional[str],
@@ -75,7 +75,9 @@ def build_filters(
         "base_score_max": base_score_max,
         "priority": priority,
         "severity": severity,
+        "year": year,
         "au_related": au_related,
+        "kev": kev,
         "period": period,
         "date_field": date_field,
         "date_from": date_from,
@@ -107,6 +109,15 @@ def fmt_number(value, digits=2):
         return str(value)
 
 
+def fmt_int(value):
+    if value in (None, ""):
+        return "0"
+    try:
+        return f"{int(value):,}"
+    except (TypeError, ValueError):
+        return str(value)
+
+
 def host_label(url: str) -> str:
     if not url:
         return "Source"
@@ -115,19 +126,24 @@ def host_label(url: str) -> str:
 
 
 templates.env.globals["query_url"] = query_url
+templates.env.globals["dataset_years"] = DATASET_YEARS
 templates.env.filters["fmt_number"] = fmt_number
+templates.env.filters["fmt_int"] = fmt_int
 templates.env.filters["host_label"] = host_label
 
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     stats = repo.get_home_stats()
-    preview = repo.list_vulnerabilities({"sort": "published_desc"}, page=1, page_size=6)
+    # Use CVE ID order on the landing page because some imported feeds share the same
+    # publication timestamp. This keeps the preview visually current without inventing data.
+    preview = repo.list_vulnerabilities({"sort": "cve_desc"}, page=1, page_size=6)
     high_signal = repo.list_vulnerabilities(
         {"sort": "score_desc", "priority": ["critical", "high"], "au_related": "yes"},
         page=1,
-        page_size=4,
+        page_size=5,
     )
+    kev_queue = repo.list_vulnerabilities({"sort": "score_desc", "kev": "yes"}, page=1, page_size=5)
     return templates.TemplateResponse(
         "home.html",
         {
@@ -135,6 +151,7 @@ def home(request: Request):
             "stats": stats,
             "preview": preview["items"],
             "high_signal": high_signal["items"],
+            "kev_queue": kev_queue["items"],
         },
     )
 
@@ -153,20 +170,21 @@ def vulnerabilities(
     base_score_max: Optional[str] = None,
     priority: List[str] = Query(default=[]),
     severity: List[str] = Query(default=[]),
+    year: List[str] = Query(default=[]),
     au_related: str = "all",
+    kev: str = "all",
     period: str = "all",
     date_field: str = "published_at",
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     sort: str = "published_desc",
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=5, le=100),
+    page_size: int = Query(25, ge=5, le=100),
 ):
     score_min = optional_score(score_min)
     score_max = optional_score(score_max)
     base_score_min = optional_score(base_score_min)
     base_score_max = optional_score(base_score_max)
-
     filters = build_filters(
         q,
         cve,
@@ -179,7 +197,9 @@ def vulnerabilities(
         base_score_max,
         priority,
         severity,
+        year,
         au_related,
+        kev,
         period,
         date_field,
         date_from,
@@ -210,10 +230,13 @@ def vulnerability_detail(request: Request, cve_id: str):
     item = repo.get_vulnerability_detail(cve_id)
     if not item:
         raise HTTPException(status_code=404, detail="Vulnerability not found")
-    return templates.TemplateResponse(
-        "detail.html",
-        {"request": request, "item": item},
-    )
+    return templates.TemplateResponse("detail.html", {"request": request, "item": item})
+
+
+
+@app.get("/api", response_class=HTMLResponse)
+def api_docs(request: Request):
+    return templates.TemplateResponse("api.html", {"request": request})
 
 
 @app.get("/api/vulnerabilities")
@@ -229,20 +252,21 @@ def vulnerabilities_api(
     base_score_max: Optional[str] = None,
     priority: List[str] = Query(default=[]),
     severity: List[str] = Query(default=[]),
+    year: List[str] = Query(default=[]),
     au_related: str = "all",
+    kev: str = "all",
     period: str = "all",
     date_field: str = "published_at",
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     sort: str = "published_desc",
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=5, le=100),
+    page_size: int = Query(25, ge=5, le=100),
 ):
     score_min = optional_score(score_min)
     score_max = optional_score(score_max)
     base_score_min = optional_score(base_score_min)
     base_score_max = optional_score(base_score_max)
-
     filters = build_filters(
         q,
         cve,
@@ -255,7 +279,9 @@ def vulnerabilities_api(
         base_score_max,
         priority,
         severity,
+        year,
         au_related,
+        kev,
         period,
         date_field,
         date_from,
@@ -263,3 +289,11 @@ def vulnerabilities_api(
         sort,
     )
     return repo.list_vulnerabilities(filters, page=page, page_size=page_size)
+
+
+@app.get("/api/vulnerabilities/{cve_id}")
+def vulnerability_detail_api(cve_id: str):
+    item = repo.get_vulnerability_detail(cve_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Vulnerability not found")
+    return item

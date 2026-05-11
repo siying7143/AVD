@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Sources · AVD{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div class="page-width heading-inner">
+    <div>
+      <div class="eyebrow">Source pipeline</div>
+      <h1>Data sources</h1>
+      <p>AVD uses the existing project pipeline: NVD provides the core CVE records; CISA KEV, EPSS and Australian cybersecurity source matches provide prioritisation evidence.</p>
+    </div>
+    <div class="heading-actions"><a class="btn secondary" href="/methodology">Methodology</a></div>
+  </div>
+</section>
+
+<section class="page-width source-grid">
+  <article class="panel source-card">
+    <div class="source-code">NVD</div>
+    <h2>Core CVE records</h2>
+    <p>Descriptions, CVSS base scores, severity, CWE identifiers, vendors, products, publication dates and modification dates.</p>
+  </article>
+  <article class="panel source-card">
+    <div class="source-code">KEV</div>
+    <h2>Known exploited evidence</h2>
+    <p>CISA Known Exploited Vulnerabilities matches are used as high-confidence exploitation evidence in the AVD score.</p>
+  </article>
+  <article class="panel source-card">
+    <div class="source-code">EPSS</div>
+    <h2>Exploitation probability</h2>
+    <p>EPSS score and percentile are displayed where available and used as exploitation-likelihood evidence by the enrichment pipeline.</p>
+  </article>
+  <article class="panel source-card">
+    <div class="source-code">AU</div>
+    <h2>Australian contextual signal</h2>
+    <p>ACSC / ASD / cyber.gov.au related matches are treated as local-context signals. They highlight triage relevance, not guaranteed Australia-specific exploitation.</p>
+  </article>
+</section>
+
+<section class="page-width panel pipeline-panel">
+  <div class="section-title-row compact"><div><div class="eyebrow">Implemented workflow</div><h2>How records move through the database</h2></div></div>
+  <div class="pipeline-steps">
+    <div><b>1</b><span>Import NVD records</span></div>
+    <div><b>2</b><span>Create or update AVD entries</span></div>
+    <div><b>3</b><span>Compute AVD assessment</span></div>
+    <div><b>4</b><span>Attach KEV / EPSS / AU evidence</span></div>
+    <div><b>5</b><span>Publish to the web portal and API</span></div>
+  </div>
+</section>
+{% endblock %}

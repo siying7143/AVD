@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Methodology · AVD{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div class="page-width heading-inner">
+    <div>
+      <div class="eyebrow">Scoring methodology</div>
+      <h1>Explainable vulnerability prioritisation</h1>
+      <p>The AVD score is a transparent heuristic used by your code to combine CVSS severity, exploitation evidence and Australian contextual relevance.</p>
+    </div>
+    <div class="heading-actions"><a class="btn primary" href="/vulnerabilities?sort=score_desc">View score ranking</a></div>
+  </div>
+</section>
+
+<section class="page-width method-grid">
+  <article class="panel method-main">
+    <div class="eyebrow">Formula</div>
+    <h2>Final score calculation</h2>
+    <div class="formula-box large">final_score = min(10, 0.8 × NVD_base + exploitation_risk + AU_signal)</div>
+    <p>The formula keeps the result readable in the detail page. NVD CVSS is the technical baseline, exploitation evidence adds real-world urgency, and Australian source evidence increases local triage visibility.</p>
+  </article>
+
+  <article class="panel method-card"><span>1</span><h3>NVD baseline</h3><p>CVSS base score is multiplied by 0.8 so that exploit and local-context evidence can influence final priority.</p></article>
+  <article class="panel method-card"><span>2</span><h3>Exploitation risk</h3><p>CISA KEV and EPSS-derived evidence increase the score when exploitation is confirmed or statistically likely.</p></article>
+  <article class="panel method-card"><span>3</span><h3>Australian signal</h3><p>Australian source matches highlight records that may deserve visibility in an Australian cybersecurity context.</p></article>
+  <article class="panel method-card"><span>4</span><h3>Priority level</h3><p>The final score maps to Critical, High, Medium and Low labels used across the dashboard, table and detail page.</p></article>
+</section>
+
+<section class="page-width panel interpretation-panel">
+  <div class="section-title-row compact"><div><div class="eyebrow">Reading the score</div><h2>Priority interpretation</h2></div></div>
+  <div class="interpretation-grid">
+    <div><strong>Critical</strong><span>Immediate review, commonly high technical severity plus exploitation or strong contextual evidence.</span></div>
+    <div><strong>High</strong><span>Prioritise after critical items; meaningful technical impact or exploitation likelihood.</span></div>
+    <div><strong>Medium</strong><span>Track and remediate based on exposure, affected assets and operational context.</span></div>
+    <div><strong>Low</strong><span>Lower triage priority unless the affected system is unusually sensitive or exposed.</span></div>
+  </div>
+</section>
+{% endblock %}

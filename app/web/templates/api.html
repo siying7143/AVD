@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}API Docs · AVD{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div class="page-width heading-inner">
+    <div>
+      <div class="eyebrow">Implemented API</div>
+      <h1>Read-only API documentation</h1>
+      <p>The Web UI exposes the same implemented FastAPI endpoints as JSON. These endpoints do not require a fake API key or sign-in flow.</p>
+    </div>
+    <div class="heading-actions"><a class="btn primary" href="/api/vulnerabilities" target="_blank" rel="noreferrer">Open JSON endpoint</a></div>
+  </div>
+</section>
+
+<section class="page-width api-layout">
+  <aside class="panel api-nav">
+    <strong>API reference</strong>
+    <a href="#list">List vulnerabilities</a>
+    <a href="#detail">Single vulnerability</a>
+    <a href="#params">Query parameters</a>
+    <a href="#examples">Examples</a>
+  </aside>
+
+  <div class="api-content">
+    <article id="list" class="panel api-card">
+      <div class="endpoint"><span>GET</span><code>/api/vulnerabilities</code></div>
+      <p>Returns a paginated list of published vulnerability records using the same filters available in the database page.</p>
+    </article>
+
+    <article id="detail" class="panel api-card">
+      <div class="endpoint"><span>GET</span><code>/api/vulnerabilities/{cve_id}</code></div>
+      <p>Returns one normalised CVE record with score breakdown, evidence fields, taxonomy lists and external references.</p>
+    </article>
+
+    <article id="params" class="panel api-card">
+      <h2>Supported query parameters</h2>
+      <div class="param-table">
+        <div><code>q</code><span>Global search across CVE, description, vendors, products and CWE.</span></div>
+        <div><code>cve</code><span>CVE ID partial match.</span></div>
+        <div><code>vendor</code><span>Vendor JSON/text field partial match.</span></div>
+        <div><code>product</code><span>Product JSON/text field partial match.</span></div>
+        <div><code>priority</code><span>Repeatable AVD priority values such as critical, high, medium or low.</span></div>
+        <div><code>severity</code><span>Repeatable NVD severity values.</span></div>
+        <div><code>score_min / score_max</code><span>AVD final score range, clamped to 0–10.</span></div>
+        <div><code>base_score_min / base_score_max</code><span>NVD CVSS base score range.</span></div>
+        <div><code>kev</code><span>all, yes or no.</span></div>
+        <div><code>au_related</code><span>all, yes or no.</span></div>
+        <div><code>page / page_size</code><span>Pagination controls. Page size supports 5–100.</span></div>
+      </div>
+    </article>
+
+    <article id="examples" class="panel api-card">
+      <h2>Example requests</h2>
+      <pre><code>/api/vulnerabilities?priority=critical&sort=score_desc
+/api/vulnerabilities?kev=yes&au_related=yes
+/api/vulnerabilities?q=remote%20code%20execution&page_size=10
+/api/vulnerabilities/CVE-2025-0001</code></pre>
+    </article>
+  </div>
+</section>
+{% endblock %}

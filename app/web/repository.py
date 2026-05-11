@@ -1,5 +1,6 @@
 import json
 import math
+from collections import Counter
 from datetime import date, datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional, Tuple
@@ -15,6 +16,8 @@ from app.config import (
 )
 from app.db import get_connection
 
+
+DATASET_YEARS = [2023, 2024, 2025, 2026]
 
 ALLOWED_SORTS = {
     "published_desc": "e.published_at DESC, v.cve_id DESC",
@@ -67,7 +70,6 @@ def _format_temporal(value: Any) -> str:
     if value is None:
         return ""
     text = str(value)
-    # Some drivers / APIs may already return ISO strings. Keep display clean.
     if "T" in text:
         text = text.replace("T", " ")
     if text.endswith("Z"):
@@ -157,11 +159,9 @@ def normalize_row(row: Dict[str, Any]) -> Dict[str, Any]:
 
     desc = (row.get("description") or "").strip()
     row["title"] = _title_from_description(row.get("cve_id") or "", desc)
-    row["summary"] = desc[:300] + ("…" if len(desc) > 300 else "")
+    row["summary"] = desc[:320] + ("…" if len(desc) > 320 else "")
 
     base = _num(row.get("base_score"))
-    exploit = _num(row.get("exploitation_risk_score"))
-    au = _num(row.get("au_signal_score"))
     final = _num(row.get("final_score"))
     row["base_component"] = float((Decimal(str(base)) * Decimal("0.8")).quantize(Decimal("0.01")))
     row["score_pct"] = max(0, min(100, final * 10))
@@ -243,6 +243,19 @@ def _where_from_filters(filters: Dict[str, Any]) -> Tuple[str, List[Any]]:
         clauses.append(f"v.severity IN ({placeholders})")
         params.extend(severities)
 
+    years = []
+    for year in filters.get("year", []) or []:
+        try:
+            year_int = int(year)
+        except (TypeError, ValueError):
+            continue
+        if year_int in DATASET_YEARS:
+            years.append(year_int)
+    if years:
+        placeholders = ", ".join(["%s"] * len(years))
+        clauses.append(f"YEAR(v.published_date) IN ({placeholders})")
+        params.extend(years)
+
     au_related = filters.get("au_related")
     if au_related == "yes":
         clauses.append(
@@ -254,6 +267,12 @@ def _where_from_filters(filters: Dict[str, Any]) -> Tuple[str, List[Any]]:
             "(COALESCE(a.au_signal_score, 0) = 0 AND a.au_signal_source IS NULL "
             "AND a.au_signal_source_url IS NULL)"
         )
+
+    kev = filters.get("kev")
+    if kev == "yes":
+        clauses.append("a.kev_status = 1")
+    elif kev == "no":
+        clauses.append("(a.kev_status IS NULL OR a.kev_status = 0)")
 
     date_field_key = filters.get("date_field") or "published_at"
     date_column = ALLOWED_DATE_FIELDS.get(date_field_key, ALLOWED_DATE_FIELDS["published_at"])
@@ -276,6 +295,14 @@ def _where_from_filters(filters: Dict[str, Any]) -> Tuple[str, List[Any]]:
     return " AND ".join(clauses), params
 
 
+def _top_items(counter: Counter, limit: int = 8) -> List[Dict[str, Any]]:
+    total = sum(counter.values()) or 1
+    return [
+        {"label": label, "count": count, "pct": round((count / total) * 100, 1)}
+        for label, count in counter.most_common(limit)
+    ]
+
+
 class AVDRepository:
     def _connect(self):
         return get_connection()
@@ -289,11 +316,13 @@ class AVDRepository:
             SUM(CASE WHEN a.priority_level = 'high' THEN 1 ELSE 0 END) AS high_count,
             SUM(CASE WHEN a.kev_status = 1 THEN 1 ELSE 0 END) AS kev_count,
             AVG(a.final_score) AS avg_final_score,
-            MAX(e.published_at) AS latest_published_at
+            MAX(e.published_at) AS latest_published_at,
+            MIN(v.published_date) AS earliest_nvd_published,
+            MAX(v.published_date) AS latest_nvd_published
         FROM {DB_TABLE_AVD_ENTRIES} e
         JOIN {DB_TABLE_VULNERABILITIES} v ON v.cve_id = e.cve_id
         LEFT JOIN {DB_TABLE_AVD_ASSESSMENTS} a ON a.assessment_id = e.assessment_id
-        WHERE e.record_status = 'published'
+        WHERE e.record_status = 'published' AND YEAR(v.published_date) BETWEEN 2023 AND 2026
         """
         with self._connect() as conn:
             with conn.cursor(pymysql.cursors.DictCursor) as cursor:
@@ -328,6 +357,7 @@ class AVDRepository:
         return {
             "priorities": priorities or PRIORITY_ORDER,
             "severities": severities or SEVERITY_ORDER,
+            "years": [str(y) for y in DATASET_YEARS],
         }
 
     def list_vulnerabilities(self, filters: Dict[str, Any], page: int, page_size: int) -> Dict[str, Any]:
@@ -432,3 +462,91 @@ class AVDRepository:
                 cursor.execute(sql, (cve_id,))
                 row = cursor.fetchone()
         return normalize_row(row) if row else None
+
+    def get_analytics_data(self) -> Dict[str, Any]:
+        summary = self.get_home_stats()
+
+        by_year_sql = f"""
+        SELECT
+            YEAR(v.published_date) AS year,
+            COUNT(*) AS total,
+            SUM(CASE WHEN a.priority_level = 'critical' THEN 1 ELSE 0 END) AS critical,
+            SUM(CASE WHEN a.priority_level = 'high' THEN 1 ELSE 0 END) AS high,
+            SUM(CASE WHEN COALESCE(a.au_signal_score, 0) > 0 OR a.au_signal_source IS NOT NULL OR a.au_signal_source_url IS NOT NULL THEN 1 ELSE 0 END) AS au_related,
+            SUM(CASE WHEN a.kev_status = 1 THEN 1 ELSE 0 END) AS kev,
+            AVG(a.final_score) AS avg_score
+        FROM {DB_TABLE_AVD_ENTRIES} e
+        JOIN {DB_TABLE_VULNERABILITIES} v ON v.cve_id = e.cve_id
+        LEFT JOIN {DB_TABLE_AVD_ASSESSMENTS} a ON a.assessment_id = e.assessment_id
+        WHERE e.record_status = 'published' AND YEAR(v.published_date) BETWEEN 2023 AND 2026
+        GROUP BY YEAR(v.published_date)
+        ORDER BY year ASC
+        """
+        dist_sql = f"""
+        SELECT
+            COALESCE(a.priority_level, 'unscored') AS priority,
+            COALESCE(v.severity, 'UNKNOWN') AS severity,
+            COUNT(*) AS total
+        FROM {DB_TABLE_AVD_ENTRIES} e
+        JOIN {DB_TABLE_VULNERABILITIES} v ON v.cve_id = e.cve_id
+        LEFT JOIN {DB_TABLE_AVD_ASSESSMENTS} a ON a.assessment_id = e.assessment_id
+        WHERE e.record_status = 'published' AND YEAR(v.published_date) BETWEEN 2023 AND 2026
+        GROUP BY COALESCE(a.priority_level, 'unscored'), COALESCE(v.severity, 'UNKNOWN')
+        """
+        raw_taxonomy_sql = f"""
+        SELECT v.vendors, v.product_names, v.cwe_ids
+        FROM {DB_TABLE_AVD_ENTRIES} e
+        JOIN {DB_TABLE_VULNERABILITIES} v ON v.cve_id = e.cve_id
+        WHERE e.record_status = 'published' AND YEAR(v.published_date) BETWEEN 2023 AND 2026
+        """
+
+        with self._connect() as conn:
+            with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute(by_year_sql)
+                by_year_rows = cursor.fetchall()
+                cursor.execute(dist_sql)
+                dist_rows = cursor.fetchall()
+                cursor.execute(raw_taxonomy_sql)
+                taxonomy_rows = cursor.fetchall()
+
+        by_year_map: Dict[int, Dict[str, Any]] = {y: {"year": y, "total": 0, "critical": 0, "high": 0, "au_related": 0, "kev": 0, "avg_score": 0} for y in DATASET_YEARS}
+        for row in by_year_rows:
+            year = int(row.get("year") or 0)
+            if year in by_year_map:
+                by_year_map[year] = {
+                    "year": year,
+                    "total": int(row.get("total") or 0),
+                    "critical": int(row.get("critical") or 0),
+                    "high": int(row.get("high") or 0),
+                    "au_related": int(row.get("au_related") or 0),
+                    "kev": int(row.get("kev") or 0),
+                    "avg_score": round(_num(row.get("avg_score")), 2),
+                }
+        by_year = list(by_year_map.values())
+        max_year_total = max([r["total"] for r in by_year] or [1]) or 1
+        for row in by_year:
+            row["total_pct"] = round((row["total"] / max_year_total) * 100, 1)
+
+        priority_counter: Counter = Counter()
+        severity_counter: Counter = Counter()
+        for row in dist_rows:
+            priority_counter[str(row.get("priority") or "unscored")] += int(row.get("total") or 0)
+            severity_counter[str(row.get("severity") or "UNKNOWN")] += int(row.get("total") or 0)
+
+        vendor_counter: Counter = Counter()
+        product_counter: Counter = Counter()
+        cwe_counter: Counter = Counter()
+        for row in taxonomy_rows:
+            vendor_counter.update(_json_list(row.get("vendors")))
+            product_counter.update(_json_list(row.get("product_names")))
+            cwe_counter.update(_json_list(row.get("cwe_ids")))
+
+        return {
+            "summary": summary,
+            "by_year": by_year,
+            "priority_distribution": _top_items(priority_counter, limit=8),
+            "severity_distribution": _top_items(severity_counter, limit=8),
+            "top_vendors": _top_items(vendor_counter, limit=10),
+            "top_products": _top_items(product_counter, limit=10),
+            "top_cwe": _top_items(cwe_counter, limit=10),
+        }
